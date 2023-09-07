@@ -90,6 +90,7 @@ def upload_file_to_sftp(session, database_name, schema_name, table_name, output_
     return message
 $$;
 
+-- Example to call the procedure
 CALL table_to_sftp('DATABASE_NAME'
                  , 'SCHEMA_NAME'
                  , 'TABLE_NAME'
