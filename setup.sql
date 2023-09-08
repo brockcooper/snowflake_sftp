@@ -63,7 +63,7 @@ def upload_file_to_sftp(session, database_name, schema_name, table_name, output_
     else:
         local_file_path = '/tmp/' + output_file_name + '.csv'
 
-    df.to_csv(local_file_path)
+    df.to_csv(local_file_path, header=True, index=False)
 
     username_password_object = _snowflake.get_username_password('cred');
 
@@ -162,7 +162,7 @@ def download_csv_from_sftp(session, database_name, schema_name, table_name, remo
                 sftp.get(remote_file_path, '/tmp/file.csv')
 
                 # Turn File into Pandas DF (reads CSV files better than Snowpark)
-                df = pd.read_csv('/tmp/file.csv', skiprows=1)
+                df = pd.read_csv('/tmp/file.csv')
 
                 # Turn Pandas to Snowpark
                 df = session.create_dataframe(df)
