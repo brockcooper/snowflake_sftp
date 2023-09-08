@@ -10,9 +10,11 @@ This is going to be a simple setup. All of this will be found in the `setup.sql`
 * **Secret**: This will contain your Username and Password to log into the SFTP Server [Docs](https://docs.snowflake.com/sql-reference/sql/create-secret)
 * **Network Rule**: This will create a network rule that represents the external network’s location and restrictions for accessing the SFTP server. This will mainly contain the Server Name and Port [Docs](https://docs.snowflake.com/sql-reference/sql/create-network-rule)
 * **External Access Integration**: Aggregates Network Rule and Secret we created before [Docs](https://docs.snowflake.com/sql-reference/sql/create-external-access-integration)
-* **Two Stored Procedures**:
+* **Three Stored Procedures**:
     * `table_to_sftp`: Moves data from a Snowflake table to an SFTP Server.
     * `sftp_to_table`: Picks up the file from SFTP and write it to a specified Snowflake Table. This Procedure accepts the [mode](https://docs.snowflake.com/developer-guide/snowpark/reference/python/latest/api/snowflake.snowpark.DataFrameWriter.mode#snowflake.snowpark.DataFrameWriter.mode) parameter, which will control how the data is written to the table. Examples of `mode` would be append, overwrite, errorifexists, and ignore.
+    * `sftp_to_internal_stage`: Moves data from a SFTP to an Internal Stage.
+
 
 ## Considerations
 

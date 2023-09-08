@@ -189,3 +189,87 @@ CALL sftp_to_table('EXAMPLE'
                  , 22 -- Port 22 is the default for SFTP, change if your port is different
                  , 'append'
 );
+
+
+/***************************************************************************
+****************************************************************************
+SFTP FILE TO INTERNAL STAGE PROCEDURE
+
+This procedure takes a file from an SFTP Server and writes it to a Snowflake
+Internal Stage
+****************************************************************************
+************************************************************************** */
+
+CREATE OR REPLACE PROCEDURE sftp_to_internal_stage(stage_name string
+                                                  ,stage_path string
+                                                  ,stage_file_name string
+                                                  ,append_timestamp BOOLEAN
+                                                  ,remote_file_path string
+                                                  ,sftp_server string
+                                                  ,port INT)
+RETURNS STRING
+LANGUAGE PYTHON
+RUNTIME_VERSION = 3.8
+HANDLER = 'download_csv_from_sftp'
+EXTERNAL_ACCESS_INTEGRATIONS = (sftp_access_integration)
+PACKAGES = ('snowflake-snowpark-python','pysftp')
+SECRETS = ('cred' = sftp_pw)
+AS
+$$
+import _snowflake
+import pysftp
+from datetime import datetime
+
+def download_csv_from_sftp(session, stage_name, stage_path, stage_file_name, append_timestamp, remote_file_path, sftp_server, port):
+
+    cnopts = pysftp.CnOpts()
+    cnopts.hostkeys = None  # Disable host key checking. Use carefully.
+
+    username_password_object = _snowflake.get_username_password('cred');
+    # Your SFTP credentials
+    sftp_host = sftp_server
+    sftp_port = port
+    sftp_username = username_password_object.username
+    sftp_password = username_password_object.password
+
+    full_path_name = f'{stage_name}{stage_path}'
+
+    # Name the staged file
+    if append_timestamp:
+        now = datetime.now()
+        epoch_time = str(int(now.timestamp() * 1000))  # Multiplied by 1000 to include milliseconds
+        stage_file_name = f'{stage_file_name}_{epoch_time}'
+
+    try:
+        with pysftp.Connection(host=sftp_host, username=sftp_username, password=sftp_password, port=sftp_port, cnopts=cnopts) as sftp:
+            # Check if the remote file exists
+            if sftp.exists(remote_file_path):
+                # Download the file
+                sftp.get(remote_file_path, f'/tmp/{stage_file_name}.csv')
+
+                # Save File to Stage
+                session.file.put(f'/tmp/{stage_file_name}.csv', full_path_name)
+
+                message = f"{remote_file_path} successfully saved to {full_path_name}"
+
+            else:
+                message = f"Remote file {remote_file_path} does not exist."
+
+    except Exception as e:
+        message = f"An error occurred: {e}"
+
+    return message
+$$;
+
+-- Example to call the sftp_to_table procedure
+CALL sftp_to_internal_stage('@example.public.example_internal_stage' -- Include the stage name
+                          , '/example/' -- Always include at least the first forward-slash
+                          , 'example_file' -- Name of the file (without the file extension)
+                          , True -- Appends an EPOCH timestamp to the file name
+                          ,'/example_folder/example.csv' -- Example remote dir path
+                          , 'YOUR-SFTP-SERVER.com'
+                          , 22 -- Port 22 is the default for SFTP, change if your port is different
+);
+
+-- Check to see how the file shows up in the internal stage
+LIST @example.public.example_internal_stage;
